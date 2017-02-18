@@ -14,7 +14,7 @@ const unsigned int AANTAL_METINGEN = 1;   //aantal metingen per gemiddelde
 
 char Kleur[10] = "Rood";
 unsigned int   pulsen = 0;    // count the frequecy
-unsigned int   g_array[4];     // aantal pulsen per kleur
+unsigned int   pulsen_Kleur[4];     // aantal pulsen per kleur
 unsigned long   g_SUM[4];     // store the RGB value no scaling SUM
 unsigned int   g_MAX[4];
 unsigned int   g_MIN[4];
@@ -24,7 +24,7 @@ unsigned int   av_B;             //gemiddelde frequentie
 unsigned int   av_C;             //gemiddelde frequentie
 unsigned int   RGBC[4];         // store the RGB value
 unsigned int   g_flag = 0;     // filter of RGB queue
-float g_SF[3];        // save the RGB Scale factor
+float g_SF[4];        // save the RGB Scale factor
 
 
 
@@ -40,6 +40,12 @@ void Sensor_init()
   // OUTPUT FREQUENCY SCALING || Power Down: LOW,LOW || 2%: LOW,HIGH || 20%: HIGH,LOW || 100%: HIGH,HIGH
   digitalWrite(S0, HIGH);
   digitalWrite(S1, HIGH);
+
+  Meting_uitvoeren(5);
+  g_SF[0] = 255.0/ pulsen_Kleur[0];     //R Scale factor
+  g_SF[1] = 255.0/ pulsen_Kleur[1] ;    //G Scale factor
+  g_SF[2] = 255.0/ pulsen_Kleur[2] ;    //B Scale factor
+  g_SF[3] = 255.0/ pulsen_Kleur[3] ;    //C Scale factor
 }
 
 
@@ -95,7 +101,7 @@ void Meet_kleur(String Kleur)      //White Balance
 
 
 
-// elke keer de functie word opgeroepen word de gemeten kleur veranderd en het resultaat opgeslagen
+// elke keer de functie word opgeroepen wordt de gemeten kleur veranderd en het resultaat opgeslagen
 void TSC_Callback()
 {
   switch (g_flag)
@@ -104,18 +110,19 @@ void TSC_Callback()
       Meet_kleur("rood");
       break;
     case 1:
-      g_array[0] = pulsen;
+      pulsen_Kleur[0] = pulsen;
       Meet_kleur("groen");
       break;
     case 2:
-      g_array[1] = pulsen;
+      pulsen_Kleur[1] = pulsen;
       Meet_kleur("blauw");
       break;
     case 3:
-      g_array[2] = pulsen;
+      pulsen_Kleur[2] = pulsen;
       Meet_kleur("clear");
       break;
     default:
+      pulsen_Kleur[3] = pulsen;
       pulsen = 0;
       break;
   }
@@ -150,16 +157,14 @@ void Meting_uitvoeren (int aantal_metingen)
   for (int j = 0; j < aantal_metingen; j++)
   {
     g_flag = 0;
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 4; i++)
     {
-      g_SUM[i] = g_SUM[i] + g_array[i];
-      if (g_MAX[i] < g_array[i])
-        g_MAX[i] = g_array[i];
-      if (g_MIN[i] > g_array[i])
-        g_MIN[i] = g_array[i];
-      RGBC[i] = int(g_array[i] * g_SF[i]);
-      /*Serial.print("->RGB =");
-        Serial.println(RGB[i]);*/
+      g_SUM[i] = g_SUM[i] + pulsen_Kleur[i];
+      if (g_MAX[i] < pulsen_Kleur[i])
+        g_MAX[i] = pulsen_Kleur[i];
+      if (g_MIN[i] > pulsen_Kleur[i])
+        g_MIN[i] = pulsen_Kleur[i];
+      RGBC[i] = int(pulsen_Kleur[i] * g_SF[i]);
     }
 
     delay(Delay_tijd);
@@ -170,6 +175,7 @@ void Meting_uitvoeren (int aantal_metingen)
   av_R = g_SUM[0] / aantal_metingen;
   av_G = g_SUM[1] / aantal_metingen;
   av_B = g_SUM[2] / aantal_metingen;
+  av_C = g_SUM[3] / aantal_metingen;
 }
 
 
@@ -180,18 +186,20 @@ void Gegevens_verz_excel ()
   Serial.print(",");
   Serial.print(av_G);
   Serial.print(",");
-  Serial.println(av_B);
+  Serial.print(av_B);
+  Serial.print(",");
+  Serial.println(av_C);
 }
 
 
 
 void setup() {
-  Sensor_init();
   Serial.begin(9600);
   Serial.println("CLEARDATA");
-  Serial.println("LABEL,TIMER,R,G,B");
+  Serial.println("LABEL,TIMER,R,G,B,C");
   Timer1.initialize(MEET_TIJD);
-  Delay_tijd = MEET_TIJD * 4 / 1000 + 50;
+  Delay_tijd = MEET_TIJD * 5 / 1000 + 50;
+  Sensor_init();
 }
 
 void loop() {
