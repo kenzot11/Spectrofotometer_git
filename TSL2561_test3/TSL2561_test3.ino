@@ -157,19 +157,16 @@ void loop()
     String serial_input = Serial.readStringUntil('\n');
     if (serial_input == "Meet data") //
     {
-      Serial.println("Meting bezig...");
       unsigned int data = meet_data(5);
       Serial.println(data);
     }
     else if (serial_input == "Meet lux")
     {
-      Serial.println("Meting bezig...");
       double lux = meet_lux(5);
       Serial.println(lux);
     }
     else if (serial_input == "Meet donker")
     {
-      Serial.println("Meting bezig...");
       donker_data = meet_data(5);
       donker_lux = meet_lux(5);
       Serial.println(donker_data);
@@ -177,7 +174,6 @@ void loop()
     }
     else if (serial_input == "Meet zonder")
     {
-      Serial.println("Meting bezig...");
       zonder_data = meet_data(5);
       zonder_lux = meet_lux(5);
       Serial.println(zonder_data);
@@ -185,7 +181,6 @@ void loop()
     }
     else if (serial_input == "Meet snel")
     {
-      Serial.println("Meting bezig...");
       unsigned int snel = meet_data(1);
       Serial.println(snel);
     }
