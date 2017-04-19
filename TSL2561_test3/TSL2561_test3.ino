@@ -63,6 +63,11 @@ unsigned int zonder_data;
 double zonder_lux;
 unsigned int meting_data;
 double meting_lux;
+unsigned int motor_delay = 1000; //deley tussen pulsen voor motor (microseconden)
+
+#define stepPin 3
+#define dirPin 5
+#define enableMotor 4
 
 
 void setup()
@@ -139,6 +144,14 @@ void setup()
   // After the specified time, you can retrieve the result from the sensor.
   // Once a measurement occurs, another integration period will start.
 
+  //Motor
+  pinMode(stepPin, OUTPUT);
+  pinMode(dirPin, OUTPUT);
+  pinMode(enableMotor, OUTPUT);
+  digitalWrite(stepPin, LOW);
+  digitalWrite(dirPin, LOW);
+  digitalWrite(enableMotor, HIGH);
+
 
   Serial.println("Commando's:");
   Serial.println("'Meet snel': meet 1 keer");
@@ -146,7 +159,8 @@ void setup()
   Serial.println("'Meet zonder': Meet zonder stof in de cuvet");
   Serial.println("'Meet data': Meet 5 keer data");
   Serial.println("'Meet lux': Meet 5 keer lux");
-  Serial.println("'Draai 1': Motor draaid 1 graad");
+  Serial.println("'Draai 90 links': Motor draaid 90 graden links");
+  Serial.println("'Draai 90 rechts': Motor draaid 90 graden rechts");
   Serial.println("'Meet niet': Niets doen");
   Serial.println("ready"); // ready sign
 }
@@ -184,11 +198,13 @@ void loop()
       unsigned int snel = meet_data(1);
       Serial.println(snel);
     }
-    else if (serial_input == "Draai 1")
+    else if (serial_input == "Draai 90 links")
     {
-      //Serial.println("Meting bezig...");
-      //unsigned int snel = meet_data(1);
-      //Serial.println(snel);
+      draai_motor(90);
+    }
+    else if (serial_input == "Draai 90 rechts")
+    {
+      draai_motor(-90);
     }
     else if (serial_input == "Meet niet")
     {
@@ -200,6 +216,41 @@ void loop()
       Serial.println("FOUT Commando");
     }
   }
+}
+
+void draai_motor(float graden)
+{
+  digitalWrite(enableMotor, LOW);
+  if (graden > 0)
+  {
+    digitalWrite(dirPin, HIGH);
+    unsigned int steps;
+    steps = graden / 0.0779;
+    for (int i = 0; i < steps; i++)
+    {
+      digitalWrite(stepPin, HIGH);
+      delayMicroseconds(motor_delay);
+      digitalWrite(stepPin, LOW);
+      delayMicroseconds(motor_delay);
+    }
+  }
+  else
+  {
+    digitalWrite(dirPin, LOW);
+    unsigned int steps;
+    graden = 0 - graden;
+    steps = graden / 0.0779;
+    for (int i = 0; i < steps; i++)
+    {
+      digitalWrite(stepPin, HIGH);
+      delayMicroseconds(motor_delay);
+      digitalWrite(stepPin, LOW);
+      delayMicroseconds(motor_delay);
+    }
+  }
+  
+  digitalWrite(enableMotor, HIGH);
+  Serial.println("klaar");
 }
 
 unsigned int meet_data(int aantal)
