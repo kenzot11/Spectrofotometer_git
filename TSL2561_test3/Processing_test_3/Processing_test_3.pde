@@ -7,8 +7,14 @@ String input = null;
 int lf = 10;    // Linefeed in ASCII
 float luxUitlezing = -1;
 int dataUitlezing = -1;
-String meet_lux = "Meet lux";
-String meet_data = "Meet data";
+int dataUitlezingSnel = -1;
+String commando_meet_lux = "Meet lux";
+String commando_meet_data = "Meet data";
+String commando_meet_data_snel = "Meet snel";
+int beginEindePunt = 1000;        //vanaf welke waarde het beginpunt en eindpunt gezet word
+String commandoDraaiLinks1 = "Draai 1 links";
+String commandoDraaiRechts1 = "Draai 1 rechts";
+int stappenVoledigSpectrum = 0;    // hoeveel stappen er nodig zijn om door het voledige spectrum te draaien
 
 final boolean debug = true;
 Serial arduino;
@@ -73,6 +79,106 @@ void draw()
 
   tekenLuxUitlezing();
   tekenDataUitlezing();
+}
+
+void initialiserenMeting()
+{
+  stappenVoledigSpectrum = zetMotorOpBegin();
+  print("aantal stappen voor voledig spectrum:");
+  println(stappenVoledigSpectrum);
+}
+
+
+int zetMotorOpBegin()
+{
+  int aantalStappen;
+  int data;
+
+  if (meet_data_snel() > beginEindePunt)
+  {
+    println("meer dan begineindpunt");
+    while (meet_data_snel() > beginEindePunt)
+    {
+      draaiMotorLinks1();
+    }
+  } else
+  {
+    println("minder dan begineindpunt");
+    while (meet_data_snel() < beginEindePunt)
+    {
+      draaiMotorRechts1();
+    }
+  }
+  println("begin stappen tellen");
+  for (aantalStappen = 1; aantalStappen <= 5; aantalStappen++)
+  {
+    draaiMotorRechts1();
+  }
+
+  while (meet_data_snel() > beginEindePunt)
+  {
+    draaiMotorRechts1();
+    aantalStappen++;
+  }
+  println("begin terugdraaien");
+  for (int i = 1; i <= aantalStappen; i++)
+  {
+    draaiMotorLinks1();
+  }
+
+  return aantalStappen;
+}
+
+void draaiMotorLinks1 ()
+{
+  boolean klaar = false;
+  String input = null;
+
+  arduino.write(commandoDraaiLinks1);
+  arduino.write('\n');
+
+  while (klaar == false)
+  {
+    while (arduino.available() > 0) 
+    {
+      input = arduino.readStringUntil(lf);
+      if (input != null) {
+        println(input);
+        if (input.contains("klaar"))
+        {
+          println("klaar draai links");
+          klaar = true;
+        }
+      }
+    }
+    delay(10);
+  }
+}
+
+void draaiMotorRechts1 ()
+{
+  boolean klaar = false;
+  String input = null;
+
+  arduino.write(commandoDraaiRechts1);
+  arduino.write('\n');
+
+  while (klaar == false)
+  {
+    while (arduino.available() > 0) 
+    {
+      input = arduino.readStringUntil(lf);
+      if (input != null) {
+        println(input);
+        if (input.contains("klaar"))
+        {
+          println("klaar draai rechts");
+          klaar = true;
+        }
+      }
+    }
+    delay(10);
+  }
 }
 
 void tekenTitel()
@@ -168,7 +274,7 @@ float meet_lux()
   float input_float = -1;
   String input = null;
 
-  arduino.write(meet_lux);
+  arduino.write(commando_meet_lux);
   arduino.write('\n');
 
   while (klaar == false)
@@ -198,7 +304,7 @@ int meet_data()
   String input = null;
   int stringLength = 0;
 
-  arduino.write(meet_data);
+  arduino.write(commando_meet_data);
   arduino.write('\n');
 
   while (klaar == false)
@@ -217,6 +323,37 @@ int meet_data()
       }
     }
     delay(30);
+  }
+
+  return input_int;
+}
+
+int meet_data_snel()
+{
+  boolean klaar = false;
+  int input_int = -1;
+  String input = null;
+  int stringLength = 0;
+
+  arduino.write(commando_meet_data_snel);
+  arduino.write('\n');
+
+  while (klaar == false)
+  {
+    while (arduino.available() > 0) 
+    {
+      input = arduino.readStringUntil(lf);
+      if (input != null) {
+        println("Meting data klaar");
+        stringLength = input.length();
+        input = input.substring(0, stringLength-2);
+        input_int = Integer.parseInt(input);
+        println(input_int);
+        dataUitlezingSnel = input_int;
+        klaar = true;
+      }
+    }
+    delay(1);
   }
 
   return input_int;
@@ -324,6 +461,9 @@ void mousePressed() {
   }
   if (knop2Over) {
     dataUitlezing = meet_data();
+  }
+  if (knop3Over) {
+    initialiserenMeting();
   }
 }
 

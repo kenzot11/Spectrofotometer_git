@@ -1,51 +1,3 @@
-/* SparkFun TSL2561 library example sketch
-
-  This sketch shows how to use the SparkFunTSL2561
-  library to read the AMS/TAOS TSL2561
-  light sensor.
-
-  Product page: https://www.sparkfun.com/products/11824
-  Hook-up guide: https://learn.sparkfun.com/tutorials/getting-started-with-the-tsl2561-luminosity-sensor
-
-  Hardware connections:
-
-  3V3 to 3.3V
-  GND to GND
-
-  (WARNING: do not connect 3V3 to 5V
-  or the sensor will be damaged!)
-
-  You will also need to connect the I2C pins (SCL and SDA) to your Arduino.
-  The pins are different on different Arduinos:
-
-                    SDA    SCL
-  Any Arduino         "SDA"  "SCL"
-  Uno, Redboard, Pro  A4     A5
-  Mega2560, Due       20     21
-  Leonardo            2      3
-
-  You do not need to connect the INT (interrupt) pin
-  for basic operation.
-
-  Operation:
-
-  Upload this sketch to your Arduino, and open the
-  Serial Monitor window to 9600 baud.
-
-  Have fun! -Your friends at SparkFun.
-
-  Our example code uses the "beerware" license.
-  You can do anything you like with this code.
-  No really, anything. If you find it useful,
-  buy me a beer someday.
-
-  V10 Mike Grusin, SparkFun Electronics 12/26/2013
-  Updated to Arduino 1.6.4 5/2015
-*/
-
-// Your sketch must #include this library, and the Wire library
-// (Wire is a standard library included with Arduino):
-
 #include <SparkFunTSL2561.h>
 #include <Wire.h>
 
@@ -63,7 +15,9 @@ unsigned int zonder_data;
 double zonder_lux;
 unsigned int meting_data;
 double meting_lux;
-unsigned int motor_delay = 1000; //deley tussen pulsen voor motor (microseconden)
+unsigned int motor_delay = 1000; //delay tussen pulsen voor motor (microseconden)
+
+unsigned char time;
 
 #define stepPin 3
 #define dirPin 5
@@ -127,7 +81,7 @@ void setup()
   // If time = 2, integration will be 402ms
   // If time = 3, use manual start / stop to perform your own integration
 
-  unsigned char time = 2;
+  time = 2;
 
   // setTiming() will set the third parameter (ms) to the
   // requested integration time in ms (this will be useful later):
@@ -155,12 +109,10 @@ void setup()
 
   Serial.println("Commando's:");
   Serial.println("'Meet snel': meet 1 keer");
-  Serial.println("'Meet donker': callibreer donker");
-  Serial.println("'Meet zonder': Meet zonder stof in de cuvet");
   Serial.println("'Meet data': Meet 5 keer data");
   Serial.println("'Meet lux': Meet 5 keer lux");
-  Serial.println("'Draai 90 links': Motor draaid 90 graden links");
-  Serial.println("'Draai 90 rechts': Motor draaid 90 graden rechts");
+  Serial.println("'Draai 1 links': Motor draaid 1 graad links");
+  Serial.println("'Draai 1 rechts': Motor draaid 90 graad rechts");
   Serial.println("'Meet niet': Niets doen");
   Serial.println("ready"); // ready sign
 }
@@ -179,32 +131,18 @@ void loop()
       double lux = meet_lux(5);
       Serial.println(lux);
     }
-    else if (serial_input == "Meet donker")
-    {
-      donker_data = meet_data(5);
-      donker_lux = meet_lux(5);
-      Serial.println(donker_data);
-      Serial.println(donker_lux);
-    }
-    else if (serial_input == "Meet zonder")
-    {
-      zonder_data = meet_data(5);
-      zonder_lux = meet_lux(5);
-      Serial.println(zonder_data);
-      Serial.println(zonder_lux);
-    }
     else if (serial_input == "Meet snel")
     {
       unsigned int snel = meet_data(1);
       Serial.println(snel);
     }
-    else if (serial_input == "Draai 90 links")
+    else if (serial_input == "Draai 1 links")
     {
-      draai_motor(90);
+      draai_motor(1);
     }
-    else if (serial_input == "Draai 90 rechts")
+    else if (serial_input == "Draai 1 rechts")
     {
-      draai_motor(-90);
+      draai_motor(-1);
     }
     else if (serial_input == "Meet niet")
     {
@@ -213,7 +151,8 @@ void loop()
     }
     else
     {
-      Serial.println("FOUT Commando");
+      Serial.print("FOUT Commando:");
+      Serial.println(serial_input);
     }
   }
 }
@@ -225,8 +164,8 @@ void draai_motor(float graden)
   {
     digitalWrite(dirPin, HIGH);
     unsigned int steps;
-    steps = graden / 0.0779;
-    for (int i = 0; i < steps; i++)
+    steps = graden / 0.07736;
+    for (unsigned int i = 0; i < steps; i++)
     {
       digitalWrite(stepPin, HIGH);
       delayMicroseconds(motor_delay);
@@ -239,7 +178,7 @@ void draai_motor(float graden)
     digitalWrite(dirPin, LOW);
     unsigned int steps;
     graden = 0 - graden;
-    steps = graden / 0.0779;
+    steps = graden / 0.07736;
     for (int i = 0; i < steps; i++)
     {
       digitalWrite(stepPin, HIGH);
@@ -256,6 +195,11 @@ void draai_motor(float graden)
 unsigned int meet_data(int aantal)
 {
   unsigned long som = 0;
+  if (aantal == 1)
+  {
+    time = 1;
+    light.setTiming(gain, time, ms);
+  }
   for (int i = 0; i < aantal; i++)
   {
     delay(ms);
@@ -281,6 +225,13 @@ unsigned int meet_data(int aantal)
     }
   }
   unsigned int gem = som / aantal;
+
+  if (aantal == 1)
+  {
+    time = 2;
+    light.setTiming(gain, time, ms);
+    delay(20);
+  }
 
   return gem;
 }
