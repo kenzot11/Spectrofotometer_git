@@ -14,7 +14,10 @@ String commando_meet_data_snel = "Meet snel";
 int beginEindePunt = 1000;        //vanaf welke waarde het beginpunt en eindpunt gezet word
 String commandoDraaiLinks1 = "Draai 1 links";
 String commandoDraaiRechts1 = "Draai 1 rechts";
-int stappenVoledigSpectrum = 0;    // hoeveel stappen er nodig zijn om door het voledige spectrum te draaien
+String commandoDraaiLinks01 = "Draai 01 links";
+String commandoDraaiRechts01 = "Draai 01 rechts";
+int stappenVoledigSpectrum = 0;    // hoeveel stappen er nodig zijn om door het voledige spectrum te draaien met 1 graad
+int stappenVoledigSpectrum01 = 0;    // hoeveel stappen er nodig zijn om door het voledige spectrum te draaien met 0.1 graad
 int [] metingInit = new int [500]; // de meting per stap zonder iets in de cuvet
 int [] meting = new int [500]; // de meting per stap met een product in de cuvet
 float [] dataGrafiek = new float [500];
@@ -42,6 +45,7 @@ color geel = color(255, 255, 0);
 color cyan = color(0, 255, 255);
 color text = color(51, 106, 196);
 color randen = color(160, 160, 225);
+color grafiek = color(90,90,90);
 color knopColor = color(180);
 color knopHighlight = color(150);
 color kleurGrafiekAssen = color(30, 30, 30);
@@ -100,17 +104,19 @@ void draw()
 
 void tekenGrafiek()
 {
+  stroke(grafiek);
+  strokeWeight(2.5);
   if (dataGrafiekOk == true)
   {
     int i = 0;
     float plaatsPerMeting = 0;
-    plaatsPerMeting = (golflengteEindeX - golflengteBeginX) / (stappenVoledigSpectrum + 1);
+    plaatsPerMeting = (float(golflengteEindeX) - float(golflengteBeginX)) / (float(stappenVoledigSpectrum01) + 0.1);
     float y1 = 0;
     float y2 = 0;
-    for (i = 0; i<stappenVoledigSpectrum; i++)
+    for (i = 0; i<stappenVoledigSpectrum01; i++)
     {
-      y1 = golflengteBeginY - (dataGrafiek[i] * ((extinctieEindeY - extinctieBeginY)/2));
-      y2 = golflengteBeginY - (dataGrafiek[i + 1] * ((extinctieEindeY - extinctieBeginY)/2));
+      y1 = float(golflengteBeginY) - (dataGrafiek[i] * ((float(extinctieEindeY) - float(extinctieBeginY))/2.0));
+      y2 = float(golflengteBeginY) - (dataGrafiek[i + 1] * ((float(extinctieEindeY) - float(extinctieBeginY))/2.0));
       line(golflengteBeginX + (plaatsPerMeting * i),y1,golflengteBeginX + ((i + 1) * plaatsPerMeting),y2);
     }
     
@@ -124,6 +130,13 @@ void tekenErrorInit()
     textSize(25);
     fill(rood);
     text("Eerst initialiseren!", 40, 525);
+  }
+  
+  if (initOk == true)
+  {
+    textSize(25);
+    fill(groen);
+    text("Initialisatie ok", 40, 525);
   }
 }
 
@@ -143,7 +156,7 @@ void dataOmzettenVoorGrafiek()
 {
   int i = 0;
   float transmissie = 0;
-  for (i = 0; i <= stappenVoledigSpectrum; i++)
+  for (i = 0; i <= stappenVoledigSpectrum01; i++)
   {
     transmissie = float(meting[i]) / float(metingInit[i]);
     dataGrafiek[i] = -1 * log10(transmissie);
@@ -155,17 +168,17 @@ void meetInitLegeCuvet()
 {
   int i;
 
-  for (i = 0; i < stappenVoledigSpectrum; i++)
+  for (i = 0; i < stappenVoledigSpectrum01; i++)
   {
     metingInit[i] = meet_data();
     delay(25);
-    draaiMotorRechts1();
+    draaiMotorRechts01();
   }
   metingInit[i] = meet_data();
   
-  for (i = 0; i < stappenVoledigSpectrum; i++)
+  for (i = 0; i < stappenVoledigSpectrum01; i++)
   {
-    draaiMotorLinks1();
+    draaiMotorLinks01();
   }
 }
 
@@ -173,17 +186,17 @@ void meetMetProductCuvet()
 {
   int i;
 
-  for (i = 0; i < stappenVoledigSpectrum; i++)
+  for (i = 0; i < stappenVoledigSpectrum01; i++)
   {
     meting[i] = meet_data();
     delay(25);
-    draaiMotorRechts1();
+    draaiMotorRechts01();
   }
   meting[i] = meet_data();
   
-  for (i = 0; i < stappenVoledigSpectrum; i++)
+  for (i = 0; i < stappenVoledigSpectrum01; i++)
   {
-    draaiMotorLinks1();
+    draaiMotorLinks01();
   }
 }
 
@@ -263,6 +276,7 @@ void setGradient(int x, int y, float w, float h, color c1, color c2) {
 void initialiserenMeting()
 {
   stappenVoledigSpectrum = zetMotorOpBegin();
+  stappenVoledigSpectrum01 = stappenVoledigSpectrum * 10;
   print("aantal stappen voor voledig spectrum:");
   println(stappenVoledigSpectrum);
   meetInitLegeCuvet();
@@ -346,6 +360,59 @@ void draaiMotorRechts1 ()
   String input = null;
 
   arduino.write(commandoDraaiRechts1);
+  arduino.write('\n');
+
+  while (klaar == false)
+  {
+    while (arduino.available() > 0) 
+    {
+      input = arduino.readStringUntil(lf);
+      if (input != null) {
+        println(input);
+        if (input.contains("klaar"))
+        {
+          println("klaar draai rechts");
+          klaar = true;
+        }
+      }
+    }
+    delay(10);
+  }
+}
+
+
+void draaiMotorLinks01 ()
+{
+  boolean klaar = false;
+  String input = null;
+
+  arduino.write(commandoDraaiLinks01);
+  arduino.write('\n');
+
+  while (klaar == false)
+  {
+    while (arduino.available() > 0) 
+    {
+      input = arduino.readStringUntil(lf);
+      if (input != null) {
+        println(input);
+        if (input.contains("klaar"))
+        {
+          println("klaar draai links");
+          klaar = true;
+        }
+      }
+    }
+    delay(10);
+  }
+}
+
+void draaiMotorRechts01 ()
+{
+  boolean klaar = false;
+  String input = null;
+
+  arduino.write(commandoDraaiRechts01);
   arduino.write('\n');
 
   while (klaar == false)

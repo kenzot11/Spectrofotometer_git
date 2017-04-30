@@ -112,7 +112,9 @@ void setup()
   Serial.println("'Meet data': Meet 5 keer data");
   Serial.println("'Meet lux': Meet 5 keer lux");
   Serial.println("'Draai 1 links': Motor draaid 1 graad links");
-  Serial.println("'Draai 1 rechts': Motor draaid 90 graad rechts");
+  Serial.println("'Draai 1 rechts': Motor draaid 1 graad rechts");
+  Serial.println("'Draai 0.1 links': Motor draaid 0.1 graad links");
+  Serial.println("'Draai 0.1 rechts': Motor draaid 0.1 graad rechts");
   Serial.println("'Meet niet': Niets doen");
   Serial.println("ready"); // ready sign
 }
@@ -123,12 +125,12 @@ void loop()
     String serial_input = Serial.readStringUntil('\n');
     if (serial_input == "Meet data") //
     {
-      unsigned int data = meet_data(5);
+      unsigned int data = meet_data(2);
       Serial.println(data);
     }
     else if (serial_input == "Meet lux")
     {
-      double lux = meet_lux(5);
+      double lux = meet_lux(2);
       Serial.println(lux);
     }
     else if (serial_input == "Meet snel")
@@ -143,6 +145,14 @@ void loop()
     else if (serial_input == "Draai 1 rechts")
     {
       draai_motor(-1);
+    }
+    else if (serial_input == "Draai 01 links")
+    {
+      draai_motor(0.1);
+    }
+    else if (serial_input == "Draai 01 rechts")
+    {
+      draai_motor(-0.1);
     }
     else if (serial_input == "Meet niet")
     {
