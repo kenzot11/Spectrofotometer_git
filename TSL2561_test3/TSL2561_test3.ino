@@ -81,7 +81,7 @@ void setup()
   // If time = 2, integration will be 402ms
   // If time = 3, use manual start / stop to perform your own integration
 
-  time = 2;
+  time = 1;
 
   // setTiming() will set the third parameter (ms) to the
   // requested integration time in ms (this will be useful later):
@@ -195,11 +195,7 @@ void draai_motor(float graden)
 unsigned int meet_data(int aantal)
 {
   unsigned long som = 0;
-  if (aantal == 1)
-  {
-    time = 1;
-    light.setTiming(gain, time, ms);
-  }
+  
   for (int i = 0; i < aantal; i++)
   {
     delay(ms);
@@ -226,12 +222,7 @@ unsigned int meet_data(int aantal)
   }
   unsigned int gem = som / aantal;
 
-  if (aantal == 1)
-  {
-    time = 2;
-    light.setTiming(gain, time, ms);
-    delay(20);
-  }
+  
 
   return gem;
 }

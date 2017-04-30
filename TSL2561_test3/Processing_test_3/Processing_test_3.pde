@@ -15,6 +15,9 @@ int beginEindePunt = 1000;        //vanaf welke waarde het beginpunt en eindpunt
 String commandoDraaiLinks1 = "Draai 1 links";
 String commandoDraaiRechts1 = "Draai 1 rechts";
 int stappenVoledigSpectrum = 0;    // hoeveel stappen er nodig zijn om door het voledige spectrum te draaien
+int [] metingInit = new int [500]; // de meting per stap zonder iets in de cuvet
+int [] meting = new int [500]; // de meting per stap met een product in de cuvet
+float [] dataGrafiek = new float [500];
 
 final boolean debug = true;
 Serial arduino;
@@ -26,14 +29,23 @@ boolean knop1Over = false;
 boolean knop2Over = false;
 boolean knop3Over = false;
 boolean knop4Over = false;
+boolean initOk = false;
+boolean errorInit = false;
+boolean dataGrafiekOk = false;
 
 //Kleuren
 color rood = color(255, 0, 0);
 color groen = color(0, 255, 0);
 color blauw = color(0, 0, 255);
+color magenta = color(255, 0, 255);
+color geel = color(255, 255, 0);
+color cyan = color(0, 255, 255);
+color text = color(51, 106, 196);
 color randen = color(160, 160, 225);
 color knopColor = color(180);
-color knopHighlight = color(100);
+color knopHighlight = color(150);
+color kleurGrafiekAssen = color(30, 30, 30);
+color kleurHorizontaleExtinctieAssen = color(100, 100, 100, 63);
 
 //Blokken grote
 int knopSizeKleinX = 160;                 // grote van de koppen
@@ -51,13 +63,15 @@ int knop4X = 40, knop4Y = 380;                            // positie knop 4
 int waarschuwingCuvetX = 40, waarschuwingCuvetY = 500;    // positie waarschuwing cuvet leeg
 int luxPosX = 240, luxPosY = 155;                         // positie uitlezing lux
 int dataPosX = 240, dataPosY = 215;                       // positie uitlezing data
+int extinctieBeginX= 480, extinctieBeginY=140, extinctieEindeX= 480, extinctieEindeY=540;    //positie grafiek assen
+int golflengteBeginX= 480, golflengteBeginY=540, golflengteEindeX= 920, golflengteEindeY=540;    //positie grafiek assen
 
 
 void setup()
 {
   //setup fonts for use throughout the application
   //set the size of the window
-  size(1000, 600);
+  size(1000, 650);
   fill(rood);
   text("Wachten op arduino", 0, 30);
   //init serial communication port
@@ -76,16 +90,184 @@ void draw()
   tekenKnop2();
   tekenKnop3();
   tekenKnop4();
+  tekenBeginGrafiek();
+  tekenGrafiek();
 
   tekenLuxUitlezing();
   tekenDataUitlezing();
+  tekenErrorInit();
 }
+
+void tekenGrafiek()
+{
+  if (dataGrafiekOk == true)
+  {
+    int i = 0;
+    float plaatsPerMeting = 0;
+    plaatsPerMeting = (golflengteEindeX - golflengteBeginX) / (stappenVoledigSpectrum + 1);
+    float y1 = 0;
+    float y2 = 0;
+    for (i = 0; i<stappenVoledigSpectrum; i++)
+    {
+      y1 = golflengteBeginY - (dataGrafiek[i] * ((extinctieEindeY - extinctieBeginY)/2));
+      y2 = golflengteBeginY - (dataGrafiek[i + 1] * ((extinctieEindeY - extinctieBeginY)/2));
+      line(golflengteBeginX + (plaatsPerMeting * i),y1,golflengteBeginX + ((i + 1) * plaatsPerMeting),y2);
+    }
+    
+  }
+}
+
+void tekenErrorInit()
+{
+  if (errorInit == true)
+  {
+    textSize(25);
+    fill(rood);
+    text("Eerst initialiseren!", 40, 525);
+  }
+}
+
+float log10 (float x) {
+  return (log(x) / log(10));
+}
+
+void meetProductGrafiek()
+{
+  dataGrafiekOk = false;
+  meetMetProductCuvet();
+  dataOmzettenVoorGrafiek();
+  dataGrafiekOk = true;
+}
+
+void dataOmzettenVoorGrafiek()
+{
+  int i = 0;
+  float transmissie = 0;
+  for (i = 0; i <= stappenVoledigSpectrum; i++)
+  {
+    transmissie = float(meting[i]) / float(metingInit[i]);
+    dataGrafiek[i] = -1 * log10(transmissie);
+    println(dataGrafiek[i]);
+  }
+}
+
+void meetInitLegeCuvet()
+{
+  int i;
+
+  for (i = 0; i < stappenVoledigSpectrum; i++)
+  {
+    metingInit[i] = meet_data();
+    delay(25);
+    draaiMotorRechts1();
+  }
+  metingInit[i] = meet_data();
+  
+  for (i = 0; i < stappenVoledigSpectrum; i++)
+  {
+    draaiMotorLinks1();
+  }
+}
+
+void meetMetProductCuvet()
+{
+  int i;
+
+  for (i = 0; i < stappenVoledigSpectrum; i++)
+  {
+    meting[i] = meet_data();
+    delay(25);
+    draaiMotorRechts1();
+  }
+  meting[i] = meet_data();
+  
+  for (i = 0; i < stappenVoledigSpectrum; i++)
+  {
+    draaiMotorLinks1();
+  }
+}
+
+void tekenBeginGrafiek()
+{
+  strokeWeight(3);
+  stroke(kleurGrafiekAssen);
+
+  line(extinctieBeginX, extinctieBeginY - 30, extinctieEindeX, extinctieEindeY);
+  line(extinctieBeginX, extinctieBeginY - 30, extinctieBeginX-10, extinctieBeginY+13 - 30);
+  line(extinctieBeginX, extinctieBeginY - 30, extinctieBeginX+10, extinctieBeginY+13 - 30);
+
+  line(golflengteBeginX, golflengteBeginY, golflengteEindeX + 15, golflengteEindeY);
+  line(golflengteEindeX + 15, golflengteEindeY, golflengteEindeX-13 + 15, golflengteEindeY+10);
+  line(golflengteEindeX + 15, golflengteEindeY, golflengteEindeX-13 + 15, golflengteEindeY-10);
+
+  pushMatrix();
+  translate(extinctieBeginX - 40, extinctieBeginY + 240);
+  rotate(PI*1.5);
+  textSize(26);
+  text("Extinctie", 0, 0);
+  popMatrix();
+
+  text("Golflengte", golflengteBeginX + 160, golflengteBeginY + 90);
+
+  setGradient(golflengteBeginX, golflengteBeginY + 20, 88, 20, magenta, blauw);
+  setGradient(golflengteBeginX + 88, golflengteBeginY + 20, 88, 20, blauw, cyan);
+  setGradient(golflengteBeginX + 88*2, golflengteBeginY + 20, 88, 20, cyan, groen);
+  setGradient(golflengteBeginX + 88*3, golflengteBeginY + 20, 88, 20, groen, geel);
+  setGradient(golflengteBeginX + 88*4, golflengteBeginY + 20, 88, 20, geel, rood);
+
+  textSize(12);
+  text("400 nm", golflengteBeginX - 15, golflengteBeginY + 60);
+  text("450 nm", golflengteBeginX - 15 + 73, golflengteBeginY + 60);
+  text("500 nm", golflengteBeginX - 15 + 73*2, golflengteBeginY + 60);
+  text("550 nm", golflengteBeginX - 15 + 73*3, golflengteBeginY + 60);
+  text("600 nm", golflengteBeginX - 15 + 73*4, golflengteBeginY + 60);
+  text("650 nm", golflengteBeginX - 15 + 73*5, golflengteBeginY + 60);
+  text("700 nm", golflengteBeginX - 15 + 73*6, golflengteBeginY + 60);
+
+  text("2.0", extinctieBeginX - 25, extinctieBeginY);
+  text("1.6", extinctieBeginX - 25, extinctieBeginY + 80);
+  text("1.2", extinctieBeginX - 25, extinctieBeginY + 80*2);
+  text("0.8", extinctieBeginX - 25, extinctieBeginY + 80*3);
+  text("0.4", extinctieBeginX - 25, extinctieBeginY + 80*4);
+  text("0.0", extinctieBeginX - 25, extinctieBeginY + 80*5);
+
+  stroke(kleurHorizontaleExtinctieAssen);
+  strokeWeight(1.5);
+
+  line(golflengteBeginX, golflengteBeginY - 80, golflengteEindeX, golflengteEindeY - 80);
+  line(golflengteBeginX, golflengteBeginY - 80 * 2, golflengteEindeX, golflengteEindeY - 80 * 2);
+  line(golflengteBeginX, golflengteBeginY - 80 * 3, golflengteEindeX, golflengteEindeY - 80 * 3);
+  line(golflengteBeginX, golflengteBeginY - 80 * 4, golflengteEindeX, golflengteEindeY - 80 * 4);
+  line(golflengteBeginX, golflengteBeginY - 80 * 5, golflengteEindeX, golflengteEindeY - 80 * 5);
+
+  strokeWeight(1);
+}
+
+
+void setGradient(int x, int y, float w, float h, color c1, color c2) {
+
+  noFill();
+
+
+  for (int i = x; i <= x+w; i++) {
+    float inter = map(i, x, x+w, 0, 1);
+    color c = lerpColor(c1, c2, inter);
+    stroke(c);
+    line(i, y, i, y+h);
+  }
+}
+
+
+
 
 void initialiserenMeting()
 {
   stappenVoledigSpectrum = zetMotorOpBegin();
   print("aantal stappen voor voledig spectrum:");
   println(stappenVoledigSpectrum);
+  meetInitLegeCuvet();
+  initOk = true;
+  errorInit = false;
 }
 
 
@@ -125,6 +307,9 @@ int zetMotorOpBegin()
   {
     draaiMotorLinks1();
   }
+
+
+  initOk = true;
 
   return aantalStappen;
 }
@@ -184,9 +369,10 @@ void draaiMotorRechts1 ()
 void tekenTitel()
 {
   fill(knopColor);
+  stroke(randen);
   rect(titelX, titelY, titelSizeX, titelSizeY);
   textSize(42);
-  fill(blauw);
+  fill(text);
   textAlign(CENTER);
   text("Spectrofotometer", titelX, titelY + 5, titelSizeX, titelSizeY);
   textAlign(LEFT);
@@ -202,7 +388,7 @@ void tekenKnop1()
   stroke(randen);
   rect(knop1X, knop1Y, knopSizeKleinX, knopSizeKleinY);
   textSize(15);
-  fill(blauw);
+  fill(text);
   text("Meet lux", knop1X+5, knop1Y+18);
 }
 
@@ -216,7 +402,7 @@ void tekenKnop2()
   stroke(randen);
   rect(knop2X, knop2Y, knopSizeKleinX, knopSizeKleinY);
   textSize(15);
-  fill(blauw);
+  fill(text);
   text("Meet data", knop2X+5, knop2Y+18);
 }
 
@@ -230,8 +416,8 @@ void tekenKnop3()
   stroke(randen);
   rect(knop3X, knop3Y, knopSizeGrootX, knopSizeGrootY);
   textSize(15);
-  fill(blauw);
-  text("start initialisatie", knop3X+5, knop3Y+18);
+  fill(text);
+  text("Start initialisatie", knop3X+5, knop3Y+18);
 }
 
 void tekenKnop4()
@@ -244,8 +430,8 @@ void tekenKnop4()
   stroke(randen);
   rect(knop4X, knop4Y, knopSizeGrootX, knopSizeGrootY);
   textSize(15);
-  fill(blauw);
-  text("start meting", knop4X+5, knop4Y+18);
+  fill(text);
+  text("Start meting", knop4X+5, knop4Y+18);
 }
 
 void tekenLuxUitlezing()
@@ -464,6 +650,15 @@ void mousePressed() {
   }
   if (knop3Over) {
     initialiserenMeting();
+  }
+  if (knop4Over) {
+    if (initOk == true)
+    {
+      meetProductGrafiek();
+    } else
+    {
+      errorInit = true;
+    }
   }
 }
 
